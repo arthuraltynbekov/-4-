@@ -7,8 +7,8 @@ const BASE_URL = 'https://jsonplaceholder.typicode.com';
 export const options = {
     stages: [
         { duration: '20s', target: 5 },
-        { duration: '5s', target: 50 },
-        { duration: '40s', target: 50 },
+        { duration: '5s', target: 20 },
+        { duration: '30s', target: 20 },
         { duration: '5s', target: 5 },
         { duration: '20s', target: 5 },
         { duration: '5s', target: 0 },
@@ -22,17 +22,60 @@ export const options = {
 };
 
 export default function () {
-    const response = http.get(`${BASE_URL}/posts`);
 
-    check(response, {
-        'Статус ответа 200': (r) => r.status === 200,
-        'Ответ содержит JSON': (r) =>
+    // Сценарий 1. Получение публикаций
+    const getResponse = http.get(`${BASE_URL}/posts`);
+
+    check(getResponse, {
+        'GET: статус 200': (r) => r.status === 200,
+
+        'GET: ответ содержит JSON': (r) =>
             r.headers['Content-Type'] &&
             r.headers['Content-Type'].includes('application/json'),
-        'Получено 100 публикаций': (r) => {
+
+        'GET: получено 100 публикаций': (r) => {
             try {
                 return Array.isArray(r.json()) &&
                     r.json().length === 100;
+            } catch (error) {
+                return false;
+            }
+        },
+    });
+
+    sleep(1);
+
+    // Сценарий 2. Создание публикации
+    const postData = {
+        title: 'Spike Test Publication',
+        body: 'Test publication created during spike testing',
+        userId: 1,
+    };
+
+    const postResponse = http.post(
+        `${BASE_URL}/posts`,
+        JSON.stringify(postData),
+        {
+            headers: {
+                'Content-Type': 'application/json',
+            },
+        }
+    );
+
+    check(postResponse, {
+        'POST: статус 201': (r) => r.status === 201,
+
+        'POST: ответ содержит JSON': (r) =>
+            r.headers['Content-Type'] &&
+            r.headers['Content-Type'].includes('application/json'),
+
+        'POST: возвращены корректные данные': (r) => {
+            try {
+                const data = r.json();
+
+                return data.title === postData.title &&
+                    data.body === postData.body &&
+                    data.userId === postData.userId;
             } catch (error) {
                 return false;
             }
